@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardware-Aware Quantisation Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121c;
+  --surface2: #1a1a28;
+  --border: #2a2a3e;
+  --text: #e0e0ec;
+  --muted: #7878a0;
+  --teal: #2dd4bf;
+  --teal-dim: #1a8a7a;
+  --amber: #f59e0b;
+  --amber-dim: #a06a08;
+  --rose: #f472b6;
+  --rose-dim: #a04878;
+  --blue: #60a5fa;
+  --green: #4ade80;
+  --purple: #a78bfa;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+header {
+  text-align: center;
+  padding: 24px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #10101a 0%, var(--bg) 100%);
+}
+header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--teal), var(--amber), var(--rose));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 10px 16px 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface); }
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--teal);
+  border-color: var(--border);
+}
+.tab-content {
+  display: none;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.tab-content.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.card h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.card h3 {
+  font-size: 0.95rem;
+  color: var(--teal);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Layout helpers */
+.row { display: flex; gap: 14px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 280px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Controls */
+.ctrl-group { margin-bottom: 12px; }
+.ctrl-group label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+select, input[type="range"] {
+  width: 100%;
+  font-family: 'DM Sans', sans-serif;
+}
+select {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  outline: none;
+}
+select:focus { border-color: var(--teal); }
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  margin-top: 4px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+}
+.range-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--teal);
+  float: right;
+}
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.fmt-btn, .scheme-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fmt-btn:hover, .scheme-btn:hover { border-color: var(--teal); color: var(--text); }
+.fmt-btn.active { background: var(--teal-dim); color: #fff; border-color: var(--teal); }
+.scheme-btn.active { background: var(--amber-dim); color: #fff; border-color: var(--amber); }
+
+/* Canvas */
+canvas {
+  display: block;
+  border-radius: 8px;
+  background: var(--surface2);
+  width: 100%;
+}
+
+/* Stats */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.stat-box {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.stat-box .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--teal);
+}
+.stat-box .lbl {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* Bit display */
+.bit-row {
+  display: flex;
+  gap: 2px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.bit-cell {
+  width: 28px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.bit-cell.sign { background: var(--rose-dim); color: #fff; }
+.bit-cell.exp { background: #2a4a6a; color: var(--blue); }
+.bit-cell.man { background: #1a3a2a; color: var(--green); }
+.bit-cell.int-bit { background: #2a2a4a; color: var(--purple); }
+.bit-cell:hover { transform: scale(1.15); z-index: 2; filter: brightness(1.3); }
+
+.bit-tooltip {
+  position: fixed;
+  background: #1e1e30;
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 100;
+  display: none;
+  max-width: 260px;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+
+/* Layer selector for mixed precision */
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+.layer-row .layer-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+  min-width: 100px;
+}
+.layer-row select {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+.layer-row .sensitivity {
+  font-size: 0.75rem;
+  color: var(--amber);
+  margin-left: auto;
+}
+
+.legend {
+  display: flex; gap: 14px; margin: 8px 0; flex-wrap: wrap;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.75rem; color: var(--muted);
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 3px;
+}
+
+/* Action button */
+.action-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal-dim), var(--teal));
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.action-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+.text-teal { color: var(--teal); }
+.text-amber { color: var(--amber); }
+.text-rose { color: var(--rose); }
+.text-muted { color: var(--muted); }
+.text-sm { font-size: 0.8rem; }
+.mt-8 { margin-top: 8px; }
+.mb-8 { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hardware-Aware Quantisation Explorer</h1>
+  <p>Visualise how neural network weights map to fixed-point and low-bit formats</p>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="tab-formats">Number Formats</button>
+  <button class="tab-btn" data-tab="tab-weights">Weight Distributions</button>
+  <button class="tab-btn" data-tab="tab-schemes">Quantisation Schemes</button>
+  <button class="tab-btn" data-tab="tab-inference">Simulated Inference</button>
+  <button class="tab-btn" data-tab="tab-hardware">Hardware Costs</button>
+  <button class="tab-btn" data-tab="tab-mixed">Mixed Precision</button>
+</div>
+
+<div class="bit-tooltip" id="bitTooltip"></div>
+
+<!-- TAB 1: Number Formats -->
+<div class="tab-content active" id="tab-formats">
+  <div class="card">
+    <h2>Select Number Format</h2>
+    <div class="btn-row" id="formatBtns"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Bit Layout</h2>
+      <div id="bitLayout"></div>
+      <div class="legend" id="bitLegend"></div>
+      <div id="formatInfo" class="text-sm text-muted mt-8"></div>
+    </div>
+    <div class="card">
+      <h2>Decoded Value</h2>
+      <div id="decodedValue" class="mono text-teal" style="font-size:1.4rem; margin-bottom:10px;">0.0</div>
+      <div id="valueBreakdown" class="text-sm mono"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Representable Number Line</h2>
+    <canvas id="numberLineCanvas" height="200"></canvas>
+    <div class="stat-grid" id="formatStats"></div>
+  </div>
+</div>
+
+<!-- TAB 2: Weight Distributions -->
+<div class="tab-content" id="tab-weights">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Distribution Settings</h2>
+      <div class="ctrl-group">
+        <label>Distribution Type</label>
+        <select id="distType">
+          <option value="gaussian">Gaussian (Normal)</option>
+          <option value="laplace">Laplace</option>
+          <option value="transformer">Transformer-like (Kurtotic)</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label>Std Dev <span class="range-val" id="distStdVal">0.05</span></label>
+        <input type="range" id="distStd" min="0.01" max="0.2" step="0.005" value="0.05">
+      </div>
+      <div class="ctrl-group">
+        <label>Num Weights <span class="range-val" id="numWeightsVal">4096</span></label>
+        <input type="range" id="numWeights" min="512" max="16384" step="512" value="4096">
+      </div>
+      <div class="ctrl-group">
+        <label>Quantise To</label>
+        <select id="quantFmt">
+          <option value="INT8">INT8</option>
+          <option value="INT4">INT4</option>
+          <option value="FP8_E4M3">FP8 (E4M3)</option>
+          <option value="FP16">FP16</option>
+          <option value="NF4">NF4</option>
+        </select>
+      </div>
+      <button class="action-btn" onclick="generateWeights()">Generate & Quantise</button>
+    </div>
+    <div class="card">
+      <h2>Error Metrics</h2>
+      <div class="stat-grid" id="weightStats">
+        <div class="stat-box"><div class="val" id="wMSE">--</div><div class="lbl">MSE</div></div>
+        <div class="stat-box"><div class="val" id="wSNR">--</div><div class="lbl">SNR (dB)</div></div>
+        <div class="stat-box"><div class="val" id="wMaxErr">--</div><div class="lbl">Max Error</div></div>
+        <div class="stat-box"><div class="val" id="wClipped">--</div><div class="lbl">Clipped %</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Weight Histogram (FP32 vs Quantised)</h2>
+    <canvas id="weightHistCanvas" height="320"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(45,212,191,0.5)"></div> FP32 Original</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(244,114,182,0.7)"></div> Quantised</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: Quantisation Schemes -->
+<div class="tab-content" id="tab-schemes">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Scheme Settings</h2>
+      <div class="ctrl-group">
+        <label>Scheme</label>
+        <select id="schemeType">
+          <option value="symmetric">Symmetric</option>
+          <option value="asymmetric">Asymmetric</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label>Calibration</label>
+        <select id="calibMethod">
+          <option value="absmax">Absmax</option>
+          <option value="minmax">MinMax</option>
+          <option value="percentile">Percentile (99.9%)</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label>Granularity</label>
+        <select id="granularity">
+          <option value="tensor">Per-Tensor</option>
+          <option value="channel">Per-Channel (simulated 8ch)</option>
+          <option value="group">Per-Group</option>
+        </select>
+      </div>
+      <div class="ctrl-group" id="groupSizeCtrl" style="display:none">
+        <label>Group Size <span class="range-val" id="groupSizeVal">128</span></label>
+        <input type="range" id="groupSize" min="16" max="512" step="16" value="128">
+      </div>
+      <div class="ctrl-group">
+        <label>Bit Width <span class="range-val" id="schemeBitsVal">8</span></label>
+        <input type="range" id="schemeBits" min="2" max="8" step="1" value="8">
+      </div>
+      <button class="action-btn" onclick="runSchemeDemo()">Run Comparison</button>
+    </div>
+    <div class="card">
+      <h2>Quantisation Parameters</h2>
+      <div id="schemeParams" class="mono text-sm"></div>
+      <div class="stat-grid" id="schemeStats" class="mt-8"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Quantisation Mapping</h2>
+    <canvas id="schemeCanvas" height="320"></canvas>
+  </div>
+  <div class="card">
+    <h2>GPTQ-Style Column-wise Effect</h2>
+    <p class="text-sm text-muted mb-8">Quantising one column introduces error that propagates to remaining columns. Watch how compensating updates reduce total error.</p>
+    <canvas id="gptqCanvas" height="240"></canvas>
+    <button class="action-btn mt-8" onclick="runGPTQDemo()">Simulate GPTQ Step</button>
+  </div>
+</div>
+
+<!-- TAB 4: Simulated Inference -->
+<div class="tab-content" id="tab-inference">
+  <div class="card">
+    <h2>Toy Network: 2D Classification</h2>
+    <p class="text-sm text-muted mb-8">A 3-layer MLP trained on a spiral dataset. Quantise and see how the decision boundary degrades.</p>
+    <div class="btn-row">
+      <button class="action-btn" onclick="trainNetwork()">Train FP32 Network</button>
+      <button class="action-btn" style="background:linear-gradient(135deg,var(--amber-dim),var(--amber))" onclick="quantiseNetwork('INT8')">Quantise INT8</button>
+      <button class="action-btn" style="background:linear-gradient(135deg,var(--rose-dim),var(--rose))" onclick="quantiseNetwork('INT4')">Quantise INT4</button>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>FP32 Decision Boundary</h3>
+      <canvas id="fp32Canvas" width="400" height="400"></canvas>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="val" id="fp32Acc">--</div><div class="lbl">Accuracy</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Quantised Decision Boundary</h3>
+      <canvas id="quantCanvas" width="400" height="400"></canvas>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="val" id="quantAcc">--</div><div class="lbl">Accuracy</div></div>
+        <div class="stat-box"><div class="val" id="quantDeg">--</div><div class="lbl">Degradation</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Layer Sensitivity Analysis</h2>
+    <canvas id="sensitivityCanvas" height="180"></canvas>
+  </div>
+</div>
+
+<!-- TAB 5: Hardware Costs -->
+<div class="tab-content" id="tab-hardware">
+  <div class="card">
+    <h2>Hardware Cost Comparison</h2>
+    <canvas id="hwCostCanvas" height="360"></canvas>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Model Size Calculator</h2>
+      <div class="ctrl-group">
+        <label>Parameter Count <span class="range-val" id="paramCountVal">7B</span></label>
+        <input type="range" id="paramCount" min="0.1" max="70" step="0.1" value="7">
+      </div>
+      <canvas id="modelSizeCanvas" height="260"></canvas>
+    </div>
+    <div class="card">
+      <h2>Area-Accuracy Tradeoff</h2>
+      <canvas id="tradeoffCanvas" height="260"></canvas>
+      <p class="text-sm text-muted mt-8">Relative multiplier area vs estimated accuracy retention. The Pareto-optimal frontier defines the best achievable tradeoffs.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 6: Mixed Precision -->
+<div class="tab-content" id="tab-mixed">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Layer Precision Assignment</h2>
+      <p class="text-sm text-muted mb-8">Assign precision per layer. Sensitive layers benefit from higher precision.</p>
+      <div id="layerList"></div>
+      <button class="action-btn mt-8" onclick="autoAssignPrecision()">Auto-Assign (Sensitivity-Based)</button>
+    </div>
+    <div class="card">
+      <h2>Summary</h2>
+      <div class="stat-grid" id="mixedStats">
+        <div class="stat-box"><div class="val" id="mixedSize">--</div><div class="lbl">Model Size</div></div>
+        <div class="stat-box"><div class="val" id="mixedAcc">--</div><div class="lbl">Est. Accuracy</div></div>
+        <div class="stat-box"><div class="val" id="mixedComp">--</div><div class="lbl">vs FP16 Size</div></div>
+      </div>
+      <canvas id="mixedBarCanvas" height="260" class="mt-8"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// GLOBAL STATE AND UTILITIES
+// =====================================================
+const FORMATS = {
+  FP32:    { bits: 32, sign: 1, exp: 8,  man: 23, type: 'float', label: 'FP32' },
+  FP16:    { bits: 16, sign: 1, exp: 5,  man: 10, type: 'float', label: 'FP16' },
+  BF16:    { bits: 16, sign: 1, exp: 8,  man: 7,  type: 'float', label: 'BF16' },
+  FP8_E4M3:{ bits: 8,  sign: 1, exp: 4,  man: 3,  type: 'float', label: 'FP8 E4M3' },
+  FP8_E5M2:{ bits: 8,  sign: 1, exp: 5,  man: 2,  type: 'float', label: 'FP8 E5M2' },
+  INT8:    { bits: 8,  sign: 1, intBits: 7, type: 'int', label: 'INT8' },
+  INT4:    { bits: 4,  sign: 1, intBits: 3, type: 'int', label: 'INT4' },
+  NF4:     { bits: 4,  sign: 0, type: 'nf4', label: 'NF4',
+             levels: [-1.0,-0.6962,-0.5251,-0.3949,-0.2844,-0.1848,-0.0911,0.0,
+                       0.0796,0.1609,0.2461,0.3379,0.4407,0.5626,0.7230,1.0] }
+};
+
+let currentFormat = 'FP32';
+let currentBits = new Array(32).fill(0);
+let fp32Weights = [];
+let toyNet = null;
+let toyData = null;
+
+// Seeded PRNG for reproducibility
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+let rng = mulberry32(42);
+
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+function getCanvasCtx(id) {
+  const c = document.getElementById(id);
+  c.width = c.clientWidth * (window.devicePixelRatio || 1);
+  c.height = c.clientHeight * (window.devicePixelRatio || 1);
+  const ctx = c.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  return { ctx, w: c.clientWidth, h: c.clientHeight };
+}
+
+// =====================================================
+// TAB NAVIGATION
+// =====================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'tab-hardware') drawHardwareCosts();
+    if (btn.dataset.tab === 'tab-mixed') initMixedPrecision();
+  });
+});
+
+// =====================================================
+// TAB 1: NUMBER FORMAT EXPLORER
+// =====================================================
+function initFormatExplorer() {
+  const container = document.getElementById('formatBtns');
+  container.innerHTML = '';
+  Object.keys(FORMATS).forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'fmt-btn' + (k === currentFormat ? ' active' : '');
+    b.textContent = FORMATS[k].label;
+    b.onclick = () => selectFormat(k);
+    container.appendChild(b);
+  });
+  selectFormat(currentFormat);
+}
+
+function selectFormat(fmt) {
+  currentFormat = fmt;
+  const f = FORMATS[fmt];
+  currentBits = new Array(f.bits).fill(0);
+  // Set a sample value
+  if (f.type === 'float') {
+    // Set to +1.5 for demo
+    currentBits[0] = 0; // positive
+    if (f.exp > 0) {
+      const bias = (1 << (f.exp - 1)) - 1;
+      let expVal = bias; // exponent for 1.x
+      for (let i = 0; i < f.exp; i++) {
+        currentBits[1 + i] = (expVal >> (f.exp - 1 - i)) & 1;
+      }
+      // mantissa: 1.5 = 1 + 0.5, so first mantissa bit = 1
+      currentBits[1 + f.exp] = 1;
+    }
+  } else if (f.type === 'int') {
+    // Set to 42 or max representable
+    let val = Math.min(42, (1 << f.intBits) - 1);
+    for (let i = 0; i < f.bits; i++) {
+      currentBits[f.bits - 1 - i] = (val >> i) & 1;
+    }
+  } else if (f.type === 'nf4') {
+    currentBits = [0, 1, 1, 0]; // index 6 -> 0.7230
+  }
+  document.querySelectorAll('.fmt-btn').forEach((b, i) => {
+    b.classList.toggle('active', Object.keys(FORMATS)[i] === fmt);
+  });
+  renderBitLayout();
+  renderNumberLine();
+}
+
+function renderBitLayout() {
+  const f = FORMATS[currentFormat];
+  const container = document.getElementById('bitLayout');
+  container.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'bit-row';
+
+  for (let i = 0; i < f.bits; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'bit-cell';
+    cell.textContent = currentBits[i];
+    cell.dataset.idx = i;
+
+    if (f.type === 'float') {
+      if (i === 0) cell.classList.add('sign');
+      else if (i <= f.exp) cell.classList.add('exp');
+      else cell.classList.add('man');
+    } else if (f.type === 'int') {
+      if (i === 0) cell.classList.add('sign');
+      else cell.classList.add('int-bit');
+    } else {
+      cell.classList.add('int-bit');
+    }
+
+    cell.addEventListener('click', () => toggleBit(i));
+    cell.addEventListener('mouseenter', (e) => showBitTooltip(e, i));
+    cell.addEventListener('mouseleave', hideBitTooltip);
+    row.appendChild(cell);
+  }
+  container.appendChild(row);
+
+  // Legend
+  const legend = document.getElementById('bitLegend');
+  if (f.type === 'float') {
+    legend.innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rose-dim)"></div>Sign (1 bit)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a4a6a"></div>Exponent (${f.exp} bits)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a"></div>Mantissa (${f.man} bits)</div>`;
+  } else if (f.type === 'int') {
+    legend.innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rose-dim)"></div>Sign (1 bit)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a2a4a"></div>Magnitude (${f.intBits} bits)</div>`;
+  } else {
+    legend.innerHTML = `<div class="legend-item"><div class="legend-dot" style="background:#2a2a4a"></div>NF4 Index (4 bits)</div>`;
+  }
+
+  updateDecodedValue();
+  updateFormatInfo();
+}
+
+function toggleBit(idx) {
+  currentBits[idx] = 1 - currentBits[idx];
+  renderBitLayout();
+}
+
+function decodeCurrentBits() {
+  const f = FORMATS[currentFormat];
+  if (f.type === 'nf4') {
+    let idx = 0;
+    for (let i = 0; i < 4; i++) idx = (idx << 1) | currentBits[i];
+    return { value: f.levels[idx], index: idx };
+  }
+  if (f.type === 'int') {
+    let sign = currentBits[0] ? -1 : 1;
+    let mag = 0;
+    for (let i = 1; i < f.bits; i++) mag = (mag << 1) | currentBits[i];
+    if (currentBits[0]) {
+      // Two's complement
+      let raw = 0;
+      for (let i = 0; i < f.bits; i++) raw = (raw << 1) | currentBits[i];
+      let val = raw - (1 << f.bits);
+      return { value: val, sign: currentBits[0], magnitude: mag };
+    }
+    return { value: mag, sign: 0, magnitude: mag };
+  }
+  // Float
+  let sign = currentBits[0];
+  let expVal = 0;
+  for (let i = 0; i < f.exp; i++) expVal = (expVal << 1) | currentBits[1 + i];
+  let manVal = 0;
+  for (let i = 0; i < f.man; i++) manVal = (manVal << 1) | currentBits[1 + f.exp + i];
+  const bias = (1 << (f.exp - 1)) - 1;
+  const maxExp = (1 << f.exp) - 1;
+  let value;
+  if (expVal === 0) {
+    // Subnormal
+    value = Math.pow(2, 1 - bias) * (manVal / Math.pow(2, f.man));
+  } else if (expVal === maxExp) {
+    value = manVal === 0 ? Infinity : NaN;
+  } else {
+    value = Math.pow(2, expVal - bias) * (1 + manVal / Math.pow(2, f.man));
+  }
+  if (sign) value = -value;
+  return { value, sign, expVal, manVal, bias, expBias: expVal - bias };
+}
+
+function updateDecodedValue() {
+  const d = decodeCurrentBits();
+  const el = document.getElementById('decodedValue');
+  const bd = document.getElementById('valueBreakdown');
+  const f = FORMATS[currentFormat];
+
+  if (isNaN(d.value)) el.textContent = 'NaN';
+  else if (!isFinite(d.value)) el.textContent = (d.sign ? '-' : '+') + 'Infinity';
+  else el.textContent = d.value.toPrecision(7);
+
+  if (f.type === 'float' && isFinite(d.value) && !isNaN(d.value)) {
+    bd.innerHTML = `(-1)<sup>${d.sign}</sup> x 2<sup>${d.expBias}</sup> x ${d.expVal === 0 ? '0' : '1'}.${(d.manVal >>> 0).toString(2).padStart(f.man, '0')}<br>
+      <span class="text-muted">Exponent: ${d.expVal} (bias ${d.bias}, effective ${d.expBias})</span>`;
+  } else if (f.type === 'nf4') {
+    bd.innerHTML = `NF4 lookup index: ${d.index} -> ${d.value.toFixed(4)}`;
+  } else {
+    bd.innerHTML = `Integer value: ${d.value}`;
+  }
+}
+
+function showBitTooltip(e, idx) {
+  const f = FORMATS[currentFormat];
+  const tip = document.getElementById('bitTooltip');
+  let text = `Bit ${idx}: ${currentBits[idx]}`;
+
+  if (f.type === 'float') {
+    if (idx === 0) {
+      text += `\nSign bit: ${currentBits[0] ? 'negative (-)' : 'positive (+)'}`;
+    } else if (idx <= f.exp) {
+      const pos = idx - 1;
+      const weight = 1 << (f.exp - 1 - pos);
+      text += `\nExponent bit ${pos}\nWeight: ${weight}`;
+    } else {
+      const pos = idx - 1 - f.exp;
+      text += `\nMantissa bit ${pos}\nWeight: 2^-${pos + 1} = ${(1 / Math.pow(2, pos + 1)).toFixed(8)}`;
+    }
+  } else if (f.type === 'int') {
+    if (idx === 0) text += '\nSign bit (two\'s complement)';
+    else {
+      const pos = f.bits - 1 - idx;
+      text += `\nBit position ${pos}, weight: ${1 << pos}`;
+    }
+  } else {
+    text += `\nNF4 index bit ${idx}`;
+  }
+
+  tip.textContent = text;
+  tip.style.display = 'block';
+  tip.style.whiteSpace = 'pre-line';
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top = (e.clientY - 10) + 'px';
+}
+
+function hideBitTooltip() {
+  document.getElementById('bitTooltip').style.display = 'none';
+}
+
+function updateFormatInfo() {
+  const f = FORMATS[currentFormat];
+  const el = document.getElementById('formatInfo');
+  const info = {
+    FP32: 'IEEE 754 single precision. Standard training format. 8-bit exponent, 23-bit mantissa.',
+    FP16: 'IEEE 754 half precision. Common for inference. Limited dynamic range (~6x10^4).',
+    BF16: 'Brain Float 16. Same exponent range as FP32 but only 7 mantissa bits. Popular for training.',
+    FP8_E4M3: 'FP8 with 4 exponent, 3 mantissa bits. Higher precision, lower range. NVIDIA H100.',
+    FP8_E5M2: 'FP8 with 5 exponent, 2 mantissa bits. Higher range, lower precision.',
+    INT8: '8-bit signed integer. Requires scale factor for mapping. Most common quantised format.',
+    INT4: '4-bit signed integer. Only 16 levels. Aggressive quantisation for large models.',
+    NF4: 'NormalFloat4. 16 non-uniform levels optimised for normally-distributed weights (QLoRA).'
+  };
+  el.textContent = info[currentFormat] || '';
+}
+
+function getRepresentableValues(fmt) {
+  const f = FORMATS[fmt];
+  const vals = new Set();
+  if (f.type === 'nf4') return f.levels.slice();
+  if (f.type === 'int') {
+    const n = 1 << f.bits;
+    for (let i = -(n/2); i < n/2; i++) vals.add(i);
+    return [...vals].sort((a,b) => a - b);
+  }
+  // Float: enumerate a subset
+  const total = 1 << f.bits;
+  const limit = Math.min(total, 65536);
+  for (let raw = 0; raw < limit; raw++) {
+    const bits = [];
+    for (let i = f.bits - 1; i >= 0; i--) bits.push((raw >> i) & 1);
+    const sign = bits[0];
+    let expVal = 0;
+    for (let i = 0; i < f.exp; i++) expVal = (expVal << 1) | bits[1 + i];
+    let manVal = 0;
+    for (let i = 0; i < f.man; i++) manVal = (manVal << 1) | bits[1 + f.exp + i];
+    const bias = (1 << (f.exp - 1)) - 1;
+    const maxExp = (1 << f.exp) - 1;
+    let value;
+    if (expVal === 0) value = Math.pow(2, 1 - bias) * (manVal / Math.pow(2, f.man));
+    else if (expVal === maxExp) continue;
+    else value = Math.pow(2, expVal - bias) * (1 + manVal / Math.pow(2, f.man));
+    vals.add(value);
+    vals.add(-value);
+  }
+  return [...vals].sort((a,b) => a - b);
+}
+
+function renderNumberLine() {
+  const { ctx, w, h } = getCanvasCtx('numberLineCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const f = FORMATS[currentFormat];
+  let vals = getRepresentableValues(currentFormat);
+
+  // For FP32/FP16, just show a zoomed region
+  let rangeMin, rangeMax;
+  if (f.type === 'int') {
+    rangeMin = -(1 << (f.bits - 1));
+    rangeMax = (1 << (f.bits - 1)) - 1;
+  } else if (f.type === 'nf4') {
+    rangeMin = -1.2; rangeMax = 1.2;
+  } else {
+    // Zoom to [-4, 4] for floats
+    rangeMin = -4; rangeMax = 4;
+    vals = vals.filter(v => v >= rangeMin && v <= rangeMax);
+  }
+
+  const pad = 40;
+  const lineY = h / 2;
+  const mapX = v => pad + (v - rangeMin) / (rangeMax - rangeMin) * (w - 2 * pad);
+
+  // Axis
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, lineY);
+  ctx.lineTo(w - pad, lineY);
+  ctx.stroke();
+
+  // Zero mark
+  const zeroX = mapX(0);
+  ctx.strokeStyle = '#5a5a7a';
+  ctx.beginPath();
+  ctx.moveTo(zeroX, lineY - 30);
+  ctx.lineTo(zeroX, lineY + 30);
+  ctx.stroke();
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('0', zeroX, lineY + 44);
+
+  // Representable values as ticks
+  const maxTicks = 2000;
+  const step = Math.max(1, Math.floor(vals.length / maxTicks));
+  ctx.strokeStyle = 'rgba(45,212,191,0.6)';
+  ctx.lineWidth = 1;
+  let tickCount = 0;
+  for (let i = 0; i < vals.length; i += step) {
+    const x = mapX(vals[i]);
+    if (x < pad || x > w - pad) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - 12);
+    ctx.lineTo(x, lineY + 12);
+    ctx.stroke();
+    tickCount++;
+  }
+
+  // Density heatmap above
+  const buckets = 200;
+  const counts = new Array(buckets).fill(0);
+  vals.forEach(v => {
+    const bi = Math.floor((v - rangeMin) / (rangeMax - rangeMin) * (buckets - 1));
+    if (bi >= 0 && bi < buckets) counts[bi]++;
+  });
+  const maxCount = Math.max(...counts, 1);
+  const barW = (w - 2 * pad) / buckets;
+  for (let i = 0; i < buckets; i++) {
+    const alpha = counts[i] / maxCount;
+    ctx.fillStyle = `rgba(45,212,191,${alpha * 0.7})`;
+    const barH = alpha * 50;
+    ctx.fillRect(pad + i * barW, lineY - 50 - barH, barW + 0.5, barH);
+  }
+
+  // Labels
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText(rangeMin.toFixed(1), pad, h - 8);
+  ctx.textAlign = 'right';
+  ctx.fillText(rangeMax.toFixed(1), w - pad, h - 8);
+  ctx.textAlign = 'center';
+  ctx.fillText(`${vals.length} representable values in range`, w / 2, 16);
+
+  // Density label
+  ctx.fillStyle = 'rgba(45,212,191,0.7)';
+  ctx.textAlign = 'left';
+  ctx.fillText('Density', pad, lineY - 58);
+
+  // Stats
+  const allVals = getRepresentableValues(currentFormat);
+  const posVals = allVals.filter(v => v > 0);
+  const statsEl = document.getElementById('formatStats');
+  const smallest = posVals.length > 0 ? Math.min(...posVals) : 0;
+  const largest = posVals.length > 0 ? Math.max(...posVals) : 0;
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="val">${f.bits}</div><div class="lbl">Bits</div></div>
+    <div class="stat-box"><div class="val">${allVals.length}</div><div class="lbl">Unique Values</div></div>
+    <div class="stat-box"><div class="val">${smallest.toExponential(1)}</div><div class="lbl">Smallest Pos</div></div>
+    <div class="stat-box"><div class="val">${largest.toExponential(1)}</div><div class="lbl">Largest</div></div>
+    <div class="stat-box"><div class="val">${(largest / (smallest || 1)).toExponential(1)}</div><div class="lbl">Dynamic Range</div></div>
+  `;
+}
+
+// =====================================================
+// TAB 2: WEIGHT DISTRIBUTION VISUALISER
+// =====================================================
+function generateWeights() {
+  rng = mulberry32(Date.now());
+  const n = parseInt(document.getElementById('numWeights').value);
+  const std = parseFloat(document.getElementById('distStd').value);
+  const type = document.getElementById('distType').value;
+
+  fp32Weights = [];
+  for (let i = 0; i < n; i++) {
+    let w;
+    if (type === 'gaussian') w = randn() * std;
+    else if (type === 'laplace') {
+      const u = rng() - 0.5;
+      w = -std * Math.sign(u) * Math.log(1 - 2 * Math.abs(u));
+    } else {
+      // Transformer-like: mixture with heavier tails
+      w = randn() * std;
+      if (rng() < 0.05) w *= 4; // outliers
+    }
+    fp32Weights.push(w);
+  }
+
+  const fmt = document.getElementById('quantFmt').value;
+  const quantised = quantiseArray(fp32Weights, fmt);
+
+  // Compute metrics
+  let mse = 0, maxErr = 0, clipped = 0;
+  const signalPower = fp32Weights.reduce((s, v) => s + v * v, 0) / n;
+  for (let i = 0; i < n; i++) {
+    const err = Math.abs(fp32Weights[i] - quantised[i]);
+    mse += err * err;
+    maxErr = Math.max(maxErr, err);
+    if (quantised[i] !== fp32Weights[i] && (Math.abs(quantised[i]) >= Math.abs(fp32Weights[i]) * 0.999)) {
+      // rough clip detect
+    }
+  }
+  mse /= n;
+  const snr = signalPower > 0 ? 10 * Math.log10(signalPower / (mse || 1e-30)) : Infinity;
+
+  // Clip detection: values that hit the extremes of quantised range
+  const qMin = Math.min(...quantised);
+  const qMax = Math.max(...quantised);
+  clipped = quantised.filter(v => v === qMin || v === qMax).length;
+
+  document.getElementById('wMSE').textContent = mse.toExponential(2);
+  document.getElementById('wSNR').textContent = snr.toFixed(1);
+  document.getElementById('wMaxErr').textContent = maxErr.toExponential(2);
+  document.getElementById('wClipped').textContent = ((clipped / n) * 100).toFixed(1) + '%';
+
+  drawWeightHistogram(fp32Weights, quantised);
+}
+
+function quantiseArray(arr, fmt) {
+  if (fmt === 'NF4') return quantiseNF4(arr);
+  if (fmt.startsWith('INT')) {
+    const bits = parseInt(fmt.replace('INT', ''));
+    return quantiseUniform(arr, bits);
+  }
+  if (fmt.startsWith('FP8')) return quantiseFP8(arr, fmt);
+  if (fmt === 'FP16') return arr.map(v => quantiseToFP16(v));
+  return arr.slice();
+}
+
+function quantiseUniform(arr, bits) {
+  const levels = 1 << bits;
+  const absMax = Math.max(...arr.map(Math.abs), 1e-10);
+  const scale = absMax / (levels / 2 - 1);
+  return arr.map(v => {
+    let q = Math.round(v / scale);
+    q = clamp(q, -(levels / 2), levels / 2 - 1);
+    return q * scale;
+  });
+}
+
+function quantiseNF4(arr) {
+  const levels = FORMATS.NF4.levels;
+  const absMax = Math.max(...arr.map(Math.abs), 1e-10);
+  return arr.map(v => {
+    const norm = v / absMax;
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i < levels.length; i++) {
+      const d = Math.abs(norm - levels[i]);
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    return levels[best] * absMax;
+  });
+}
+
+function quantiseFP8(arr, fmt) {
+  const f = FORMATS[fmt];
+  const bias = (1 << (f.exp - 1)) - 1;
+  const maxExp = (1 << f.exp) - 2;
+  const maxMan = (1 << f.man) - 1;
+  const maxVal = Math.pow(2, maxExp - bias) * (1 + maxMan / Math.pow(2, f.man));
+
+  return arr.map(v => {
+    const sign = v < 0 ? 1 : 0;
+    const av = Math.min(Math.abs(v), maxVal);
+    if (av === 0) return 0;
+    let e = Math.floor(Math.log2(av));
+    let m = av / Math.pow(2, e) - 1;
+    e = clamp(e + bias, 0, maxExp);
+    m = Math.round(m * Math.pow(2, f.man));
+    m = clamp(m, 0, maxMan);
+    const result = Math.pow(2, e - bias) * (1 + m / Math.pow(2, f.man));
+    return sign ? -result : result;
+  });
+}
+
+function quantiseToFP16(v) {
+  // Approximate FP16 quantisation
+  const f32 = new Float32Array([v]);
+  const u32 = new Uint32Array(f32.buffer);
+  const raw = u32[0];
+  const sign = (raw >> 31) & 1;
+  let exp = ((raw >> 23) & 0xFF) - 127 + 15;
+  let man = (raw >> 13) & 0x3FF;
+  if (exp <= 0) { exp = 0; man = 0; }
+  if (exp >= 31) { exp = 31; man = 0; }
+  const h = (sign << 15) | (exp << 10) | man;
+  // Decode back
+  const s2 = (h >> 15) & 1;
+  const e2 = (h >> 10) & 0x1F;
+  const m2 = h & 0x3FF;
+  if (e2 === 0) return s2 ? -0 : 0;
+  if (e2 === 31) return m2 === 0 ? (s2 ? -Infinity : Infinity) : NaN;
+  const result = Math.pow(2, e2 - 15) * (1 + m2 / 1024);
+  return s2 ? -result : result;
+}
+
+function drawWeightHistogram(orig, quant) {
+  const { ctx, w, h } = getCanvasCtx('weightHistCanvas');
+  ctx.clearRect(0, 0, w, h);
+
+  const allVals = [...orig, ...quant];
+  const lo = Math.min(...allVals);
+  const hi = Math.max(...allVals);
+  const range = hi - lo || 1;
+  const nBins = 80;
+  const binW = range / nBins;
+
+  const binsOrig = new Array(nBins).fill(0);
+  const binsQuant = new Array(nBins).fill(0);
+  orig.forEach(v => {
+    const bi = clamp(Math.floor((v - lo) / binW), 0, nBins - 1);
+    binsOrig[bi]++;
+  });
+  quant.forEach(v => {
+    const bi = clamp(Math.floor((v - lo) / binW), 0, nBins - 1);
+    binsQuant[bi]++;
+  });
+
+  const maxBin = Math.max(...binsOrig, ...binsQuant, 1);
+  const pad = { l: 50, r: 20, t: 20, b: 40 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+  const bw = pw / nBins;
+
+  // Original
+  ctx.fillStyle = 'rgba(45,212,191,0.35)';
+  for (let i = 0; i < nBins; i++) {
+    const bh = (binsOrig[i] / maxBin) * ph;
+    ctx.fillRect(pad.l + i * bw, pad.t + ph - bh, bw - 1, bh);
+  }
+
+  // Quantised
+  ctx.fillStyle = 'rgba(244,114,182,0.55)';
+  for (let i = 0; i < nBins; i++) {
+    const bh = (binsQuant[i] / maxBin) * ph;
+    ctx.fillRect(pad.l + i * bw + bw * 0.2, pad.t + ph - bh, bw * 0.6, bh);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const val = lo + (range * i / 4);
+    const x = pad.l + (i / 4) * pw;
+    ctx.fillText(val.toFixed(3), x, h - 8);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 3; i++) {
+    const val = Math.round(maxBin * i / 3);
+    const y = pad.t + ph - (i / 3) * ph;
+    ctx.fillText(val, pad.l - 6, y + 4);
+  }
+}
+
+// =====================================================
+// TAB 3: QUANTISATION SCHEMES
+// =====================================================
+function runSchemeDemo() {
+  rng = mulberry32(77);
+  const n = 2048;
+  const weights = [];
+  for (let i = 0; i < n; i++) weights.push(randn() * 0.05);
+
+  const scheme = document.getElementById('schemeType').value;
+  const calib = document.getElementById('calibMethod').value;
+  const gran = document.getElementById('granularity').value;
+  const bits = parseInt(document.getElementById('schemeBits').value);
+
+  const levels = 1 << bits;
+  let scale, zp = 0;
+
+  // Calibration
+  let wMin, wMax;
+  if (calib === 'absmax') {
+    const am = Math.max(...weights.map(Math.abs));
+    wMin = -am; wMax = am;
+  } else if (calib === 'minmax') {
+    wMin = Math.min(...weights);
+    wMax = Math.max(...weights);
+  } else {
+    // Percentile
+    const sorted = [...weights].sort((a, b) => a - b);
+    const lo = Math.floor(n * 0.001);
+    const hi = Math.floor(n * 0.999);
+    wMin = sorted[lo]; wMax = sorted[hi];
+  }
+
+  if (scheme === 'symmetric') {
+    const am = Math.max(Math.abs(wMin), Math.abs(wMax));
+    scale = am / (levels / 2 - 1);
+    zp = 0;
+  } else {
+    scale = (wMax - wMin) / (levels - 1);
+    zp = Math.round(-wMin / scale);
+  }
+
+  // Apply granularity: for simplicity simulate channels
+  let quantised;
+  if (gran === 'tensor') {
+    quantised = weights.map(v => {
+      let q = Math.round(v / scale) + zp;
+      q = clamp(q, scheme === 'symmetric' ? -(levels/2) : 0, scheme === 'symmetric' ? levels/2-1 : levels-1);
+      return (q - zp) * scale;
+    });
+  } else {
+    // per-channel or per-group
+    const groupSize = gran === 'channel' ? Math.floor(n / 8) : parseInt(document.getElementById('groupSize').value);
+    quantised = new Array(n);
+    for (let g = 0; g < n; g += groupSize) {
+      const end = Math.min(g + groupSize, n);
+      const group = weights.slice(g, end);
+      let gMin, gMax;
+      if (calib === 'absmax') {
+        const am = Math.max(...group.map(Math.abs));
+        gMin = -am; gMax = am;
+      } else if (calib === 'minmax') {
+        gMin = Math.min(...group); gMax = Math.max(...group);
+      } else {
+        const sorted = [...group].sort((a,b) => a - b);
+        gMin = sorted[Math.floor(sorted.length * 0.001)] || sorted[0];
+        gMax = sorted[Math.floor(sorted.length * 0.999)] || sorted[sorted.length-1];
+      }
+      let gScale, gZp = 0;
+      if (scheme === 'symmetric') {
+        const am = Math.max(Math.abs(gMin), Math.abs(gMax));
+        gScale = am / (levels / 2 - 1);
+      } else {
+        gScale = (gMax - gMin) / (levels - 1);
+        gZp = Math.round(-gMin / gScale);
+      }
+      for (let i = g; i < end; i++) {
+        let q = Math.round(weights[i] / (gScale || 1e-10)) + gZp;
+        q = clamp(q, scheme === 'symmetric' ? -(levels/2) : 0, scheme === 'symmetric' ? levels/2-1 : levels-1);
+        quantised[i] = (q - gZp) * (gScale || 0);
+      }
+    }
+  }
+
+  // MSE
+  let mse = 0;
+  for (let i = 0; i < n; i++) mse += (weights[i] - quantised[i]) ** 2;
+  mse /= n;
+
+  // Display params
+  document.getElementById('schemeParams').innerHTML = `
+    Scale: <span class="text-teal">${scale.toExponential(4)}</span><br>
+    Zero-point: <span class="text-teal">${zp}</span><br>
+    Levels: <span class="text-teal">${levels}</span><br>
+    Range: [${wMin.toFixed(4)}, ${wMax.toFixed(4)}]
+  `;
+  document.getElementById('schemeStats').innerHTML = `
+    <div class="stat-box"><div class="val">${mse.toExponential(2)}</div><div class="lbl">MSE</div></div>
+    <div class="stat-box"><div class="val">${bits}</div><div class="lbl">Bits</div></div>
+    <div class="stat-box"><div class="val">${gran}</div><div class="lbl">Granularity</div></div>
+  `;
+
+  drawSchemeCanvas(weights, quantised, scale, zp, scheme, levels);
+}
+
+function drawSchemeCanvas(weights, quantised, scale, zp, scheme, levels) {
+  const { ctx, w, h } = getCanvasCtx('schemeCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 50, r: 50, t: 30, b: 40 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  // Draw quantisation staircase
+  const wMin = Math.min(...weights);
+  const wMax = Math.max(...weights);
+  const range = wMax - wMin || 1;
+
+  // Input range on x-axis, output on y-axis
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  // Identity line
+  ctx.strokeStyle = 'rgba(120,120,160,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t);
+  ctx.stroke();
+
+  // Staircase
+  ctx.strokeStyle = 'rgba(45,212,191,0.8)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const steps = 300;
+  for (let i = 0; i <= steps; i++) {
+    const v = wMin + (i / steps) * range;
+    let q = Math.round(v / scale) + zp;
+    q = clamp(q, scheme === 'symmetric' ? -(levels/2) : 0, scheme === 'symmetric' ? levels/2-1 : levels-1);
+    const qv = (q - zp) * scale;
+    const x = pad.l + (i / steps) * pw;
+    const y = pad.t + ph - ((qv - wMin) / range) * ph;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Scatter of actual weight -> quantised weight
+  ctx.fillStyle = 'rgba(244,114,182,0.3)';
+  const maxPts = Math.min(weights.length, 800);
+  const step = Math.max(1, Math.floor(weights.length / maxPts));
+  for (let i = 0; i < weights.length; i += step) {
+    const x = pad.l + ((weights[i] - wMin) / range) * pw;
+    const y = pad.t + ph - ((quantised[i] - wMin) / range) * ph;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Labels
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('Input (FP32)', pad.l + pw / 2, h - 6);
+  ctx.save();
+  ctx.translate(12, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Quantised Output', 0, 0);
+  ctx.restore();
+}
+
+function runGPTQDemo() {
+  rng = mulberry32(123);
+  const cols = 16, rows = 8;
+  const W = [];
+  for (let r = 0; r < rows; r++) {
+    W[r] = [];
+    for (let c = 0; c < cols; c++) W[r][c] = randn() * 0.1;
+  }
+
+  // Simulate GPTQ: quantise column by column, updating remaining
+  const Q = W.map(r => r.slice());
+  const errors = [];
+  const H = []; // Diagonal of Hessian (simplified)
+  for (let c = 0; c < cols; c++) {
+    H[c] = 1 + rng() * 0.5; // fake Hessian diagonal
+  }
+
+  for (let c = 0; c < cols; c++) {
+    let colErr = 0;
+    for (let r = 0; r < rows; r++) {
+      const orig = Q[r][c];
+      const scale = 0.1 / 7;
+      let q = Math.round(orig / scale);
+      q = clamp(q, -8, 7);
+      const qv = q * scale;
+      const err = orig - qv;
+      Q[r][c] = qv;
+      colErr += err * err;
+      // Compensate remaining columns
+      for (let j = c + 1; j < cols; j++) {
+        Q[r][j] += err * (H[c] / H[j]) * 0.1;
+      }
+    }
+    errors.push(Math.sqrt(colErr / rows));
+  }
+
+  drawGPTQCanvas(errors, cols);
+}
+
+function drawGPTQCanvas(errors, cols) {
+  const { ctx, w, h } = getCanvasCtx('gptqCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 50, r: 20, t: 20, b: 40 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+  const maxErr = Math.max(...errors);
+  const barW = pw / cols;
+
+  for (let i = 0; i < cols; i++) {
+    const bh = (errors[i] / maxErr) * ph;
+    const x = pad.l + i * barW;
+    const gradient = ctx.createLinearGradient(x, pad.t + ph - bh, x, pad.t + ph);
+    gradient.addColorStop(0, 'rgba(245,158,11,0.8)');
+    gradient.addColorStop(1, 'rgba(245,158,11,0.2)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x + 2, pad.t + ph - bh, barW - 4, bh);
+
+    ctx.fillStyle = '#8888a0';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(`C${i}`, x + barW / 2, h - 8);
+  }
+
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph); ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('Column Index (quantised left to right)', pad.l + pw / 2, h - 22);
+  ctx.textAlign = 'right';
+  ctx.fillText('RMSE', pad.l - 6, pad.t + 10);
+}
+
+// =====================================================
+// TAB 4: SIMULATED INFERENCE
+// =====================================================
+function generateSpiralData(n, noise) {
+  const data = { x: [], y: [], labels: [] };
+  for (let c = 0; c < 3; c++) {
+    for (let i = 0; i < n; i++) {
+      const r = (i / n) * 1.0;
+      const t = c * 4 + (i / n) * 4 + randn() * noise;
+      data.x.push(r * Math.cos(t));
+      data.y.push(r * Math.sin(t));
+      data.labels.push(c);
+    }
+  }
+  return data;
+}
+
+class ToyMLP {
+  constructor() {
+    this.layers = [
+      { w: this.randMat(2, 16), b: new Array(16).fill(0), name: 'Hidden 1 (2->16)' },
+      { w: this.randMat(16, 16), b: new Array(16).fill(0), name: 'Hidden 2 (16->16)' },
+      { w: this.randMat(16, 3), b: new Array(3).fill(0), name: 'Output (16->3)' },
+    ];
+    this.sensitivity = [0, 0, 0];
+  }
+  randMat(rows, cols) {
+    const m = [];
+    const std = Math.sqrt(2.0 / rows);
+    for (let r = 0; r < rows; r++) {
+      m[r] = [];
+      for (let c = 0; c < cols; c++) m[r][c] = randn() * std;
+    }
+    return m;
+  }
+  forward(x, quantBits) {
+    let a = x;
+    for (let l = 0; l < this.layers.length; l++) {
+      let W = this.layers[l].w;
+      let B = this.layers[l].b;
+      if (quantBits && quantBits[l]) {
+        W = this.quantiseMatrix(W, quantBits[l]);
+      }
+      const out = [];
+      for (let j = 0; j < W[0].length; j++) {
+        let sum = B[j];
+        for (let i = 0; i < a.length; i++) sum += a[i] * W[i][j];
+        out.push(l < this.layers.length - 1 ? Math.max(0, sum) : sum); // ReLU or linear
+      }
+      a = out;
+    }
+    // Softmax
+    const maxA = Math.max(...a);
+    const exps = a.map(v => Math.exp(v - maxA));
+    const sum = exps.reduce((s, v) => s + v, 0);
+    return exps.map(v => v / sum);
+  }
+  quantiseMatrix(mat, bits) {
+    const flat = mat.flat();
+    const absMax = Math.max(...flat.map(Math.abs), 1e-10);
+    const levels = 1 << bits;
+    const scale = absMax / (levels / 2 - 1);
+    return mat.map(row => row.map(v => {
+      let q = Math.round(v / scale);
+      q = clamp(q, -(levels / 2), levels / 2 - 1);
+      return q * scale;
+    }));
+  }
+  predict(x, quantBits) {
+    const probs = this.forward(x, quantBits);
+    let best = 0;
+    for (let i = 1; i < probs.length; i++) if (probs[i] > probs[best]) best = i;
+    return best;
+  }
+  train(data, epochs, lr) {
+    for (let ep = 0; ep < epochs; ep++) {
+      // Stochastic gradient descent with finite differences (toy impl)
+      const idx = Math.floor(rng() * data.x.length);
+      const x = [data.x[idx], data.y[idx]];
+      const label = data.labels[idx];
+      const loss0 = this.crossEntropyLoss(x, label);
+      const delta = 0.001;
+
+      for (let l = 0; l < this.layers.length; l++) {
+        for (let r = 0; r < this.layers[l].w.length; r++) {
+          for (let c = 0; c < this.layers[l].w[r].length; c++) {
+            this.layers[l].w[r][c] += delta;
+            const loss1 = this.crossEntropyLoss(x, label);
+            this.layers[l].w[r][c] -= delta;
+            const grad = (loss1 - loss0) / delta;
+            this.layers[l].w[r][c] -= lr * grad;
+          }
+        }
+        for (let j = 0; j < this.layers[l].b.length; j++) {
+          this.layers[l].b[j] += delta;
+          const loss1 = this.crossEntropyLoss(x, label);
+          this.layers[l].b[j] -= delta;
+          const grad = (loss1 - loss0) / delta;
+          this.layers[l].b[j] -= lr * grad;
+        }
+      }
+    }
+  }
+  crossEntropyLoss(x, label) {
+    const probs = this.forward(x);
+    return -Math.log(Math.max(probs[label], 1e-10));
+  }
+  accuracy(data, quantBits) {
+    let correct = 0;
+    for (let i = 0; i < data.x.length; i++) {
+      const pred = this.predict([data.x[i], data.y[i]], quantBits);
+      if (pred === data.labels[i]) correct++;
+    }
+    return correct / data.x.length;
+  }
+  computeSensitivity(data) {
+    const baseAcc = this.accuracy(data);
+    this.sensitivity = this.layers.map((_, l) => {
+      const qb = [null, null, null];
+      qb[l] = 4; // Quantise just this layer to INT4
+      const qAcc = this.accuracy(data, qb);
+      return baseAcc - qAcc;
+    });
+  }
+}
+
+function trainNetwork() {
+  rng = mulberry32(42);
+  toyData = generateSpiralData(100, 0.15);
+  toyNet = new ToyMLP();
+  // Train for more iterations
+  toyNet.train(toyData, 5000, 0.05);
+  const acc = toyNet.accuracy(toyData);
+  document.getElementById('fp32Acc').textContent = (acc * 100).toFixed(1) + '%';
+  drawDecisionBoundary('fp32Canvas', toyNet, toyData, null);
+  toyNet.computeSensitivity(toyData);
+  drawSensitivity();
+
+  // Clear quantised side
+  const { ctx, w, h } = getCanvasCtx('quantCanvas');
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#5a5a7a';
+  ctx.font = '14px DM Sans';
+  ctx.textAlign = 'center';
+  ctx.fillText('Click a quantise button above', w/2, h/2);
+  document.getElementById('quantAcc').textContent = '--';
+  document.getElementById('quantDeg').textContent = '--';
+}
+
+function quantiseNetwork(fmt) {
+  if (!toyNet || !toyData) { trainNetwork(); }
+  const bits = fmt === 'INT8' ? 8 : 4;
+  const qb = [bits, bits, bits];
+  const acc = toyNet.accuracy(toyData, qb);
+  const fp32Acc = toyNet.accuracy(toyData);
+  document.getElementById('quantAcc').textContent = (acc * 100).toFixed(1) + '%';
+  document.getElementById('quantDeg').textContent = ((fp32Acc - acc) * 100).toFixed(1) + '%';
+  drawDecisionBoundary('quantCanvas', toyNet, toyData, qb);
+}
+
+function drawDecisionBoundary(canvasId, net, data, quantBits) {
+  const { ctx, w, h } = getCanvasCtx(canvasId);
+  ctx.clearRect(0, 0, w, h);
+  const s = Math.min(w, h);
+  const colors = [
+    [45, 212, 191],  // teal
+    [244, 114, 182], // rose
+    [167, 139, 250], // purple
+  ];
+
+  // Decision boundary
+  const res = 80;
+  const range = 1.5;
+  const cellW = s / res;
+  for (let i = 0; i < res; i++) {
+    for (let j = 0; j < res; j++) {
+      const x = -range + (2 * range * i / res);
+      const y = -range + (2 * range * j / res);
+      const pred = net.predict([x, y], quantBits);
+      const c = colors[pred];
+      ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},0.2)`;
+      ctx.fillRect(i * cellW, j * cellW, cellW + 1, cellW + 1);
+    }
+  }
+
+  // Data points
+  for (let i = 0; i < data.x.length; i++) {
+    const px = ((data.x[i] + range) / (2 * range)) * s;
+    const py = ((data.y[i] + range) / (2 * range)) * s;
+    const c = colors[data.labels[i]];
+    ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+}
+
+function drawSensitivity() {
+  if (!toyNet) return;
+  const { ctx, w, h } = getCanvasCtx('sensitivityCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 140, r: 20, t: 20, b: 20 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+  const maxS = Math.max(...toyNet.sensitivity, 0.01);
+  const barH = ph / toyNet.layers.length - 8;
+
+  for (let i = 0; i < toyNet.layers.length; i++) {
+    const y = pad.t + i * (ph / toyNet.layers.length) + 4;
+    const bw = (toyNet.sensitivity[i] / maxS) * pw;
+
+    const grad = ctx.createLinearGradient(pad.l, 0, pad.l + bw, 0);
+    grad.addColorStop(0, 'rgba(245,158,11,0.3)');
+    grad.addColorStop(1, 'rgba(245,158,11,0.9)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(pad.l, y, bw, barH);
+
+    ctx.fillStyle = '#e0e0ec';
+    ctx.font = '12px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(toyNet.layers[i].name, pad.l - 10, y + barH / 2 + 4);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'left';
+    ctx.fillText((toyNet.sensitivity[i] * 100).toFixed(1) + '%', pad.l + bw + 6, y + barH / 2 + 4);
+  }
+}
+
+// =====================================================
+// TAB 5: HARDWARE COSTS
+// =====================================================
+const HW_DATA = {
+  FP32:     { area: 1.00, sram: 4.0, bw: 1.00, accRet: 1.00 },
+  FP16:     { area: 0.25, sram: 2.0, bw: 0.50, accRet: 0.998 },
+  BF16:     { area: 0.25, sram: 2.0, bw: 0.50, accRet: 0.995 },
+  FP8_E4M3: { area: 0.06, sram: 1.0, bw: 0.25, accRet: 0.985 },
+  FP8_E5M2: { area: 0.06, sram: 1.0, bw: 0.25, accRet: 0.980 },
+  INT8:     { area: 0.04, sram: 1.0, bw: 0.25, accRet: 0.990 },
+  INT4:     { area: 0.01, sram: 0.5, bw: 0.125, accRet: 0.960 },
+  NF4:      { area: 0.02, sram: 0.5, bw: 0.125, accRet: 0.975 },
+};
+
+function drawHardwareCosts() {
+  drawHWBarChart();
+  drawModelSizeChart();
+  drawTradeoffChart();
+}
+
+function drawHWBarChart() {
+  const { ctx, w, h } = getCanvasCtx('hwCostCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 100, r: 30, t: 40, b: 50 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+  const fmts = Object.keys(HW_DATA);
+  const nFmt = fmts.length;
+  const metrics = ['area', 'sram', 'bw'];
+  const metricLabels = ['Multiplier Area', 'SRAM/Weight (B)', 'Mem BW (rel)'];
+  const metricColors = ['rgba(45,212,191,0.7)', 'rgba(244,114,182,0.7)', 'rgba(167,139,250,0.7)'];
+  const groupW = pw / nFmt;
+  const barW = groupW / (metrics.length + 1);
+
+  // Legend
+  metrics.forEach((m, mi) => {
+    ctx.fillStyle = metricColors[mi];
+    ctx.fillRect(pad.l + mi * 140, 10, 12, 12);
+    ctx.fillStyle = '#8888a0';
+    ctx.font = '11px DM Sans';
+    ctx.textAlign = 'left';
+    ctx.fillText(metricLabels[mi], pad.l + mi * 140 + 18, 20);
+  });
+
+  for (let fi = 0; fi < nFmt; fi++) {
+    const d = HW_DATA[fmts[fi]];
+    const vals = [d.area, d.sram / 4, d.bw]; // normalise sram to max 1
+    for (let mi = 0; mi < metrics.length; mi++) {
+      const bh = vals[mi] * ph;
+      const x = pad.l + fi * groupW + mi * barW + barW * 0.3;
+      ctx.fillStyle = metricColors[mi];
+      ctx.fillRect(x, pad.t + ph - bh, barW * 0.8, bh);
+    }
+    ctx.fillStyle = '#e0e0ec';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(FORMATS[fmts[fi]]?.label || fmts[fi], pad.l + fi * groupW + groupW / 2, h - 12);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph); ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = i / 4;
+    const y = pad.t + ph - v * ph;
+    ctx.fillText(v.toFixed(2), pad.l - 6, y + 4);
+    ctx.strokeStyle = '#2a2a3e';
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke();
+  }
+}
+
+function drawModelSizeChart() {
+  const { ctx, w, h } = getCanvasCtx('modelSizeCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const params = parseFloat(document.getElementById('paramCount').value) * 1e9;
+  const pad = { l: 100, r: 20, t: 20, b: 50 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  const fmts = Object.keys(HW_DATA);
+  const sizes = fmts.map(f => params * HW_DATA[f].sram / (1024 * 1024 * 1024)); // GB
+  const maxSize = Math.max(...sizes);
+  const barH = ph / fmts.length - 4;
+
+  for (let i = 0; i < fmts.length; i++) {
+    const y = pad.t + i * (ph / fmts.length) + 2;
+    const bw = (sizes[i] / maxSize) * pw;
+
+    const colors = ['#2dd4bf', '#2dd4bf', '#60a5fa', '#f59e0b', '#f59e0b', '#4ade80', '#f472b6', '#a78bfa'];
+    ctx.fillStyle = colors[i] || '#2dd4bf';
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(pad.l, y, bw, barH);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = '#e0e0ec';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(FORMATS[fmts[i]]?.label || fmts[i], pad.l - 8, y + barH / 2 + 4);
+
+    ctx.fillStyle = '#e0e0ec';
+    ctx.textAlign = 'left';
+    ctx.fillText(sizes[i].toFixed(1) + ' GB', pad.l + bw + 6, y + barH / 2 + 4);
+  }
+
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph);
+  ctx.stroke();
+}
+
+function drawTradeoffChart() {
+  const { ctx, w, h } = getCanvasCtx('tradeoffCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 50, r: 30, t: 20, b: 40 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  const fmts = Object.keys(HW_DATA);
+  const points = fmts.map(f => ({
+    x: HW_DATA[f].area,
+    y: HW_DATA[f].accRet,
+    label: FORMATS[f]?.label || f,
+  }));
+
+  // Axes
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph); ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  // Pareto frontier
+  const sorted = [...points].sort((a, b) => a.x - b.x);
+  let pareto = [sorted[0]];
+  let bestY = sorted[0].y;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].y >= bestY) {
+      pareto.push(sorted[i]);
+      bestY = sorted[i].y;
+    }
+  }
+  ctx.strokeStyle = 'rgba(45,212,191,0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  pareto.forEach((p, i) => {
+    const px = pad.l + p.x * pw;
+    const py = pad.t + ph - (p.y - 0.95) / 0.05 * ph;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Points
+  const colors = ['#2dd4bf','#2dd4bf','#60a5fa','#f59e0b','#f59e0b','#4ade80','#f472b6','#a78bfa'];
+  points.forEach((p, i) => {
+    const px = pad.l + p.x * pw;
+    const py = pad.t + ph - (p.y - 0.95) / 0.05 * ph;
+    ctx.fillStyle = colors[i];
+    ctx.beginPath();
+    ctx.arc(px, clamp(py, pad.t, pad.t + ph), 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#e0e0ec';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.label, px, clamp(py, pad.t, pad.t + ph) - 12);
+  });
+
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('Relative Multiplier Area', pad.l + pw / 2, h - 6);
+  ctx.save();
+  ctx.translate(12, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Accuracy Retention', 0, 0);
+  ctx.restore();
+
+  // Y-axis labels
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = 0.95 + i * 0.05 / 4;
+    const y = pad.t + ph - (i / 4) * ph;
+    ctx.fillText((v * 100).toFixed(1) + '%', pad.l - 6, y + 4);
+  }
+}
+
+// =====================================================
+// TAB 6: MIXED PRECISION
+// =====================================================
+const MODEL_LAYERS = [
+  { name: 'embed_tokens', params: 32000 * 4096, sensitivity: 0.85, precision: 'FP16' },
+  { name: 'attn.q_proj', params: 4096 * 4096 * 32, sensitivity: 0.72, precision: 'INT8' },
+  { name: 'attn.k_proj', params: 4096 * 4096 * 32, sensitivity: 0.55, precision: 'INT8' },
+  { name: 'attn.v_proj', params: 4096 * 4096 * 32, sensitivity: 0.48, precision: 'INT8' },
+  { name: 'attn.o_proj', params: 4096 * 4096 * 32, sensitivity: 0.65, precision: 'INT8' },
+  { name: 'mlp.gate_proj', params: 4096 * 11008 * 32, sensitivity: 0.30, precision: 'INT4' },
+  { name: 'mlp.up_proj', params: 4096 * 11008 * 32, sensitivity: 0.25, precision: 'INT4' },
+  { name: 'mlp.down_proj', params: 11008 * 4096 * 32, sensitivity: 0.35, precision: 'INT4' },
+  { name: 'lm_head', params: 4096 * 32000, sensitivity: 0.90, precision: 'FP16' },
+];
+
+const PRECISION_OPTIONS = ['FP32', 'FP16', 'BF16', 'INT8', 'INT4', 'NF4'];
+const BITS_MAP = { FP32: 32, FP16: 16, BF16: 16, INT8: 8, INT4: 4, NF4: 4 };
+const ACC_PENALTY = { FP32: 0, FP16: 0.001, BF16: 0.002, INT8: 0.005, INT4: 0.025, NF4: 0.015 };
+
+function initMixedPrecision() {
+  const container = document.getElementById('layerList');
+  container.innerHTML = '';
+  MODEL_LAYERS.forEach((layer, i) => {
+    const row = document.createElement('div');
+    row.className = 'layer-row';
+    row.innerHTML = `
+      <span class="layer-name">${layer.name}</span>
+      <select id="layerPrec_${i}" onchange="updateMixedSummary()">
+        ${PRECISION_OPTIONS.map(p => `<option value="${p}" ${p === layer.precision ? 'selected' : ''}>${p}</option>`).join('')}
+      </select>
+      <span class="sensitivity">sens: ${(layer.sensitivity * 100).toFixed(0)}%</span>
+    `;
+    container.appendChild(row);
+  });
+  updateMixedSummary();
+}
+
+function updateMixedSummary() {
+  let totalBytes = 0;
+  let totalParams = 0;
+  let accLoss = 0;
+
+  MODEL_LAYERS.forEach((layer, i) => {
+    const sel = document.getElementById(`layerPrec_${i}`);
+    if (!sel) return;
+    const prec = sel.value;
+    layer.precision = prec;
+    const bits = BITS_MAP[prec];
+    totalBytes += layer.params * bits / 8;
+    totalParams += layer.params;
+    accLoss += ACC_PENALTY[prec] * layer.sensitivity;
+  });
+
+  const sizeGB = totalBytes / (1024 ** 3);
+  const fp16Size = totalParams * 2 / (1024 ** 3);
+  const estAcc = Math.max(0, (1 - accLoss) * 100);
+  const compression = ((1 - sizeGB / fp16Size) * 100);
+
+  document.getElementById('mixedSize').textContent = sizeGB.toFixed(2) + ' GB';
+  document.getElementById('mixedAcc').textContent = estAcc.toFixed(1) + '%';
+  document.getElementById('mixedComp').textContent = compression.toFixed(1) + '% smaller';
+
+  drawMixedBarChart();
+}
+
+function autoAssignPrecision() {
+  MODEL_LAYERS.forEach((layer, i) => {
+    let prec;
+    if (layer.sensitivity >= 0.8) prec = 'FP16';
+    else if (layer.sensitivity >= 0.5) prec = 'INT8';
+    else prec = 'NF4';
+    const sel = document.getElementById(`layerPrec_${i}`);
+    if (sel) sel.value = prec;
+    layer.precision = prec;
+  });
+  updateMixedSummary();
+}
+
+function drawMixedBarChart() {
+  const { ctx, w, h } = getCanvasCtx('mixedBarCanvas');
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 110, r: 20, t: 10, b: 20 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+  const n = MODEL_LAYERS.length;
+  const barH = ph / n - 4;
+
+  const precColors = {
+    FP32: '#2dd4bf', FP16: '#60a5fa', BF16: '#818cf8',
+    INT8: '#f59e0b', INT4: '#f472b6', NF4: '#a78bfa'
+  };
+
+  const maxParams = Math.max(...MODEL_LAYERS.map(l => l.params));
+
+  for (let i = 0; i < n; i++) {
+    const layer = MODEL_LAYERS[i];
+    const y = pad.t + i * (ph / n) + 2;
+    const bw = (layer.params / maxParams) * pw;
+
+    ctx.fillStyle = precColors[layer.precision] || '#888';
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(pad.l, y, bw, barH);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = '#e0e0ec';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'right';
+    const shortName = layer.name.length > 14 ? layer.name.slice(0, 14) + '..' : layer.name;
+    ctx.fillText(shortName, pad.l - 6, y + barH / 2 + 3);
+
+    ctx.fillStyle = precColors[layer.precision];
+    ctx.textAlign = 'left';
+    ctx.fillText(layer.precision, pad.l + bw + 6, y + barH / 2 + 3);
+  }
+}
+
+// =====================================================
+// EVENT LISTENERS & INIT
+// =====================================================
+document.getElementById('granularity').addEventListener('change', () => {
+  document.getElementById('groupSizeCtrl').style.display =
+    document.getElementById('granularity').value === 'group' ? '' : 'none';
+});
+
+// Range display updates
+['distStd', 'numWeights', 'groupSize', 'schemeBits'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => {
+    const valEl = document.getElementById(id + 'Val');
+    if (valEl) valEl.textContent = el.value;
+  });
+});
+
+document.getElementById('paramCount').addEventListener('input', function() {
+  const v = parseFloat(this.value);
+  document.getElementById('paramCountVal').textContent =
+    v >= 1 ? v.toFixed(1) + 'B' : (v * 1000).toFixed(0) + 'M';
+  drawModelSizeChart();
+});
+
+// Init
+initFormatExplorer();
+generateWeights();
+</script>
+</body>
+</html>
